@@ -12,13 +12,15 @@ import android.os.Parcelable;
 import android.support.annotation.ColorRes;
 import android.support.annotation.NonNull;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.view.animation.OvershootInterpolator;
+import android.widget.LinearLayout;
 
-public class FloatingActionsMenu extends ViewGroup {
+public class FloatingActionsMenu extends LinearLayout {
     public static final int EXPAND_UP = 0;
     public static final int EXPAND_DOWN = 1;
     public static final int EXPAND_LEFT = 2;
@@ -36,6 +38,7 @@ public class FloatingActionsMenu extends ViewGroup {
     private int mButtonSpacing;
 
     private boolean mExpanded;
+    private ExpandCollapseListener listener;
 
     private AnimatorSet mExpandAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
     private AnimatorSet mCollapseAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
@@ -54,6 +57,10 @@ public class FloatingActionsMenu extends ViewGroup {
     public FloatingActionsMenu(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         init(context, attrs);
+    }
+
+    public void setExpandListener(ExpandCollapseListener listener) {
+        this.listener = listener;
     }
 
     private void init(Context context, AttributeSet attributeSet) {
@@ -146,7 +153,10 @@ public class FloatingActionsMenu extends ViewGroup {
             }
         });
 
-        addView(mAddButton, super.generateDefaultLayoutParams());
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.gravity = Gravity.RIGHT;
+
+        addView(mAddButton, params);
     }
 
     private int getColor(@ColorRes int id) {
@@ -265,17 +275,17 @@ public class FloatingActionsMenu extends ViewGroup {
     }
 
     @Override
-    protected ViewGroup.LayoutParams generateDefaultLayoutParams() {
+    protected LinearLayout.LayoutParams generateDefaultLayoutParams() {
         return new LayoutParams(super.generateDefaultLayoutParams());
     }
 
     @Override
-    public ViewGroup.LayoutParams generateLayoutParams(AttributeSet attrs) {
+    public LinearLayout.LayoutParams generateLayoutParams(AttributeSet attrs) {
         return new LayoutParams(super.generateLayoutParams(attrs));
     }
 
     @Override
-    protected ViewGroup.LayoutParams generateLayoutParams(ViewGroup.LayoutParams p) {
+    protected LinearLayout.LayoutParams generateLayoutParams(ViewGroup.LayoutParams p) {
         return new LayoutParams(super.generateLayoutParams(p));
     }
 
@@ -288,7 +298,7 @@ public class FloatingActionsMenu extends ViewGroup {
     private static Interpolator sCollapseInterpolator = new DecelerateInterpolator(3f);
     private static Interpolator sAlphaExpandInterpolator = new DecelerateInterpolator();
 
-    private class LayoutParams extends ViewGroup.LayoutParams {
+    private class LayoutParams extends LinearLayout.LayoutParams {
 
         private ObjectAnimator mExpandDir = new ObjectAnimator();
         private ObjectAnimator mExpandAlpha = new ObjectAnimator();
@@ -297,6 +307,7 @@ public class FloatingActionsMenu extends ViewGroup {
 
         public LayoutParams(ViewGroup.LayoutParams source) {
             super(source);
+
 
             mExpandDir.setInterpolator(sExpandInterpolator);
             mExpandAlpha.setInterpolator(sAlphaExpandInterpolator);
@@ -326,6 +337,7 @@ public class FloatingActionsMenu extends ViewGroup {
 
             mCollapseAnimation.play(mCollapseAlpha);
             mCollapseAnimation.play(mCollapseDir);
+
         }
 
         public void setAnimationsTarget(View view) {
@@ -352,8 +364,14 @@ public class FloatingActionsMenu extends ViewGroup {
 
     public void toggle() {
         if (mExpanded) {
+            if (listener != null) {
+                listener.onCollapseStarted(ANIMATION_DURATION);
+            }
             collapse();
         } else {
+            if (listener != null) {
+                listener.onExpandStarted(ANIMATION_DURATION);
+            }
             expand();
         }
     }
@@ -421,5 +439,11 @@ public class FloatingActionsMenu extends ViewGroup {
                 return new SavedState[size];
             }
         };
+    }
+
+    public static interface ExpandCollapseListener {
+        public void onExpandStarted(int duration);
+
+        public void onCollapseStarted(int duration);
     }
 }
