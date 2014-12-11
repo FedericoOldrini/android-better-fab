@@ -27,21 +27,20 @@ public class FloatingActionsMenu extends LinearLayout {
     public static final int EXPAND_RIGHT = 3;
 
     private static final int ANIMATION_DURATION = 300;
+    private AnimatorSet mExpandAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
+    private AnimatorSet mCollapseAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
     private static final float COLLAPSED_PLUS_ROTATION = 0f;
     private static final float EXPANDED_PLUS_ROTATION = 90f + 45f;
-
+    private static Interpolator sExpandInterpolator = new OvershootInterpolator();
+    private static Interpolator sCollapseInterpolator = new DecelerateInterpolator(3f);
+    private static Interpolator sAlphaExpandInterpolator = new DecelerateInterpolator();
     private int mAddButtonPlusColor;
     private int mAddButtonColorNormal;
     private int mAddButtonColorPressed;
     private int mExpandDirection;
-
     private int mButtonSpacing;
-
     private boolean mExpanded;
     private ExpandCollapseListener listener;
-
-    private AnimatorSet mExpandAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
-    private AnimatorSet mCollapseAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
     private AddFloatingActionButton mAddButton;
     private RotatingDrawable mRotatingDrawable;
 
@@ -86,33 +85,6 @@ public class FloatingActionsMenu extends LinearLayout {
         }
 
         createAddButton(context);
-    }
-
-    private static class RotatingDrawable extends LayerDrawable {
-        public RotatingDrawable(Drawable drawable) {
-            super(new Drawable[]{drawable});
-        }
-
-        private float mRotation;
-
-        @SuppressWarnings("UnusedDeclaration")
-        public float getRotation() {
-            return mRotation;
-        }
-
-        @SuppressWarnings("UnusedDeclaration")
-        public void setRotation(float rotation) {
-            mRotation = rotation;
-            invalidateSelf();
-        }
-
-        @Override
-        public void draw(Canvas canvas) {
-            canvas.save();
-            canvas.rotate(mRotation, getBounds().centerX(), getBounds().centerY());
-            super.draw(canvas);
-            canvas.restore();
-        }
     }
 
     private void createAddButton(Context context) {
@@ -294,60 +266,6 @@ public class FloatingActionsMenu extends LinearLayout {
         return super.checkLayoutParams(p);
     }
 
-    private static Interpolator sExpandInterpolator = new OvershootInterpolator();
-    private static Interpolator sCollapseInterpolator = new DecelerateInterpolator(3f);
-    private static Interpolator sAlphaExpandInterpolator = new DecelerateInterpolator();
-
-    private class LayoutParams extends LinearLayout.LayoutParams {
-
-        private ObjectAnimator mExpandDir = new ObjectAnimator();
-        private ObjectAnimator mExpandAlpha = new ObjectAnimator();
-        private ObjectAnimator mCollapseDir = new ObjectAnimator();
-        private ObjectAnimator mCollapseAlpha = new ObjectAnimator();
-
-        public LayoutParams(ViewGroup.LayoutParams source) {
-            super(source);
-
-
-            mExpandDir.setInterpolator(sExpandInterpolator);
-            mExpandAlpha.setInterpolator(sAlphaExpandInterpolator);
-            mCollapseDir.setInterpolator(sCollapseInterpolator);
-            mCollapseAlpha.setInterpolator(sCollapseInterpolator);
-
-            mCollapseAlpha.setProperty(View.ALPHA);
-            mCollapseAlpha.setFloatValues(1f, 0f);
-
-            mExpandAlpha.setProperty(View.ALPHA);
-            mExpandAlpha.setFloatValues(0f, 1f);
-
-            switch (mExpandDirection) {
-                case EXPAND_UP:
-                case EXPAND_DOWN:
-                    mCollapseDir.setProperty(View.TRANSLATION_Y);
-                    mExpandDir.setProperty(View.TRANSLATION_Y);
-                    break;
-                case EXPAND_LEFT:
-                case EXPAND_RIGHT:
-                    mCollapseDir.setProperty(View.TRANSLATION_X);
-                    mExpandDir.setProperty(View.TRANSLATION_X);
-            }
-
-            mExpandAnimation.play(mExpandAlpha);
-            mExpandAnimation.play(mExpandDir);
-
-            mCollapseAnimation.play(mCollapseAlpha);
-            mCollapseAnimation.play(mCollapseDir);
-
-        }
-
-        public void setAnimationsTarget(View view) {
-            mCollapseAlpha.setTarget(view);
-            mCollapseDir.setTarget(view);
-            mExpandAlpha.setTarget(view);
-            mExpandDir.setTarget(view);
-        }
-    }
-
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
@@ -409,7 +327,52 @@ public class FloatingActionsMenu extends LinearLayout {
         }
     }
 
+    public static interface ExpandCollapseListener {
+        public void onExpandStarted(int duration);
+
+        public void onCollapseStarted(int duration);
+    }
+
+    private static class RotatingDrawable extends LayerDrawable {
+        private float mRotation;
+
+        public RotatingDrawable(Drawable drawable) {
+            super(new Drawable[]{drawable});
+        }
+
+        @SuppressWarnings("UnusedDeclaration")
+        public float getRotation() {
+            return mRotation;
+        }
+
+        @SuppressWarnings("UnusedDeclaration")
+        public void setRotation(float rotation) {
+            mRotation = rotation;
+            invalidateSelf();
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            canvas.save();
+            canvas.rotate(mRotation, getBounds().centerX(), getBounds().centerY());
+            super.draw(canvas);
+            canvas.restore();
+        }
+    }
+
     public static class SavedState extends BaseSavedState {
+        public static final Creator<SavedState> CREATOR = new Creator<SavedState>() {
+
+            @Override
+            public SavedState createFromParcel(Parcel in) {
+                return new SavedState(in);
+            }
+
+            @Override
+            public SavedState[] newArray(int size) {
+                return new SavedState[size];
+            }
+        };
         public boolean mExpanded;
 
         public SavedState(Parcelable parcel) {
@@ -426,24 +389,55 @@ public class FloatingActionsMenu extends LinearLayout {
             super.writeToParcel(out, flags);
             out.writeInt(mExpanded ? 1 : 0);
         }
-
-        public static final Creator<SavedState> CREATOR = new Creator<SavedState>() {
-
-            @Override
-            public SavedState createFromParcel(Parcel in) {
-                return new SavedState(in);
-            }
-
-            @Override
-            public SavedState[] newArray(int size) {
-                return new SavedState[size];
-            }
-        };
     }
 
-    public static interface ExpandCollapseListener {
-        public void onExpandStarted(int duration);
+    private class LayoutParams extends LinearLayout.LayoutParams {
 
-        public void onCollapseStarted(int duration);
+        private ObjectAnimator mExpandDir = new ObjectAnimator();
+        private ObjectAnimator mExpandAlpha = new ObjectAnimator();
+        private ObjectAnimator mCollapseDir = new ObjectAnimator();
+        private ObjectAnimator mCollapseAlpha = new ObjectAnimator();
+
+        public LayoutParams(ViewGroup.LayoutParams source) {
+            super(source);
+
+
+            mExpandDir.setInterpolator(sExpandInterpolator);
+            mExpandAlpha.setInterpolator(sAlphaExpandInterpolator);
+            mCollapseDir.setInterpolator(sCollapseInterpolator);
+            mCollapseAlpha.setInterpolator(sCollapseInterpolator);
+
+            mCollapseAlpha.setProperty(View.ALPHA);
+            mCollapseAlpha.setFloatValues(1f, 0f);
+
+            mExpandAlpha.setProperty(View.ALPHA);
+            mExpandAlpha.setFloatValues(0f, 1f);
+
+            switch (mExpandDirection) {
+                case EXPAND_UP:
+                case EXPAND_DOWN:
+                    mCollapseDir.setProperty(View.TRANSLATION_Y);
+                    mExpandDir.setProperty(View.TRANSLATION_Y);
+                    break;
+                case EXPAND_LEFT:
+                case EXPAND_RIGHT:
+                    mCollapseDir.setProperty(View.TRANSLATION_X);
+                    mExpandDir.setProperty(View.TRANSLATION_X);
+            }
+
+            mExpandAnimation.play(mExpandAlpha);
+            mExpandAnimation.play(mExpandDir);
+
+            mCollapseAnimation.play(mCollapseAlpha);
+            mCollapseAnimation.play(mCollapseDir);
+
+        }
+
+        public void setAnimationsTarget(View view) {
+            mCollapseAlpha.setTarget(view);
+            mCollapseDir.setTarget(view);
+            mExpandAlpha.setTarget(view);
+            mExpandDir.setTarget(view);
+        }
     }
 }

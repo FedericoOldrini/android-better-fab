@@ -17,7 +17,6 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.StateListDrawable;
-import android.media.Image;
 import android.os.Build;
 import android.os.Build.VERSION_CODES;
 import android.support.annotation.ColorRes;
@@ -26,7 +25,6 @@ import android.support.annotation.DrawableRes;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 
 public class FloatingActionButton extends FrameLayout {
@@ -134,7 +132,7 @@ public class FloatingActionButton extends FrameLayout {
         params.gravity = Gravity.RIGHT | Gravity.BOTTOM;
         imageButton.setLayoutParams(params);
 
-       // setBackgroundCompat(layerDrawable);
+        // setBackgroundCompat(layerDrawable);
     }
 
     Drawable getIconDrawable() {
